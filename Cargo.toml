@@ -1,0 +1,12 @@
+[package]
+name = "audio-cd-ripper"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cd-da-reader = "0.1.0"
+ureq = "3.1.0"
+windows = { version = "0.61.3", features = [
+    "Win32_Storage_FileSystem",
+    "Win32_System_SystemServices",
+]}

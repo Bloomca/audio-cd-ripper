@@ -25,8 +25,7 @@ pub fn get_drive_letter() -> Result<Vec<String>> {
 
             let drive_type = unsafe { GetDriveTypeW(pcwstr) };
             if drive_type == DRIVE_CDROM {
-                let drive_handle = format!(r"\\.\{drive_char}");
-                println!("CD drive: {}", drive_handle);
+                let drive_handle = format!(r"\\.\{drive_char}:");
                 res.push(drive_handle);
             }
         }

@@ -7,8 +7,7 @@ use ureq;
 
 #[derive(Debug, Deserialize)]
 pub struct MusicBrainzResponse {
-    pub releases: Option<Vec<Release>>,
-    pub release: Option<Release>,
+    pub releases: Option<Vec<Release>>
 }
 
 #[derive(Debug, Deserialize)]
@@ -64,7 +63,7 @@ impl MusicBrainzClient {
         id: &str,
         includes: &[&str],
     ) -> Result<MusicBrainzResponse, MusicBrainzError> {
-        let mut url = format!("https://musicbrainz.org/ws/2/discid/{}-", id);
+        let mut url = format!("https://musicbrainz.org/ws/2/discid/{}", id);
 
         if !includes.is_empty() {
             url.push_str(&format!("&inc={}", includes.join("+")));

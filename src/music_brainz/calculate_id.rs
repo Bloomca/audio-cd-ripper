@@ -3,6 +3,7 @@ use sha1::{Digest, Sha1};
 
 use cd_da_reader::Toc;
 
+/// read more about the algorithm here: https://musicbrainz.org/doc/Disc_ID_Calculation
 pub fn calculate_music_brainz_id(toc: &Toc) -> String {
     let toc_string = format_toc_string(toc);
 
@@ -16,7 +17,7 @@ pub fn calculate_music_brainz_id(toc: &Toc) -> String {
     base64_result
         .replace('+', ".")
         .replace('/', "_")
-        .trim_end_matches('=')
+        .replace('=', "-")
         .to_string()
 }
 

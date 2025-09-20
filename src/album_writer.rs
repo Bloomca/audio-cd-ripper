@@ -21,22 +21,54 @@ pub fn write_album(album: &Album, reader: &CdReader, toc: &Toc) -> Result<()> {
 
     let new_dir = current_dir.join(&album.title);
 
+    if new_dir.exists() {
+        println!("Folder {} already exists, quitting", new_dir.display());
+        return Ok(());
+    }
+
+    println!("Creating new folder for the album: {}", new_dir.display());
+
     fs::create_dir(new_dir.as_path())?;
 
     for track in &album.tracks {
-        let track_num = track.num.try_into().unwrap();
-        let track_data = reader.read_track(toc, track_num)?;
-        save_raw_data_as_flac(new_dir.join(&track.title), track_data, track, album);
+        let Ok(track_num) = track.num.try_into() else {
+            println!(
+                "Could not convert the track number into u8 for {}. The value is {}.",
+                &track.title, track.num
+            );
+            continue;
+        };
+
+        println!("Writing a track #{}: {}", track_num, &track.title);
+
+        match reader.read_track(toc, track_num) {
+            Ok(track_data) => {
+                save_raw_data_as_flac(new_dir.join(&track.title), track_data, track, album)
+            }
+            Err(error) => {
+                println!("Could not read track #{}, {}", track_num, &track.title);
+                println!("Error: {:#?}", error);
+                return Err(error);
+            }
+        };
+
+        println!("Successfully wrote the track #{}: {}", track_num, &track.title);
     }
 
     match fetch_album_art(album, &new_dir) {
         Ok(_) => {
             // pass, the success message is baked into the file
-        },
+        }
         Err(error) => {
-             println!("{:#?}", error);
-        },
+            println!(
+                "Could not fetch cover art for {} by {}",
+                &album.title, &album.artist
+            );
+            println!("{:#?}", error);
+        }
     }
+
+    println!("Successfully saved the album data");
 
     Ok(())
 }

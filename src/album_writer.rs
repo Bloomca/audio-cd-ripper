@@ -41,16 +41,14 @@ pub fn save_raw_data_as_flac(file_path: PathBuf, data: Vec<u8>) -> Option<()> {
     let bits_per_sample = 16u32;
     let channels = 2u8;
 
-    let total_samples_per_channel = data.len() as u64;
-
     let mut flac_writer: FlacByteWriter<std::io::BufWriter<fs::File>, LittleEndian> =
         FlacByteWriter::create(
             file,
-            Options::default(),
+            Options::best(),
             sample_rate,
             bits_per_sample,
             channels,
-            Some(total_samples_per_channel),
+            None,
         )
         .unwrap();
 

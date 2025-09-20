@@ -21,6 +21,8 @@ pub struct Release {
     #[serde(rename = "cover-art-archive")]
     pub cover_art_archive: Option<CoverArtArchive>,
     pub media: Option<Vec<Medium>>,
+    #[serde(rename = "artist-credit")]
+    pub artist_credit: Option<Vec<ArtistCredit>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -54,6 +56,21 @@ pub struct Track {
     pub number: Option<String>,          // "1", "2", …
     pub title: Option<String>,
     pub length: Option<u32>,             // ms
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ArtistCredit {
+    pub name: String,                    // credited name on this release/track
+    pub joinphrase: Option<String>,      // " & ", " feat. ", etc.
+    pub artist: Option<Artist>,          // canonical artist entity
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Artist {
+    pub id: String,                      // MBID
+    pub name: String,                    // canonical name
+    #[serde(rename = "sort-name")]
+    pub sort_name: Option<String>,
 }
 
 #[derive(Debug)]
@@ -126,6 +143,7 @@ impl MusicBrainzClient {
 
         let includes: Vec<&str> = vec![
             "recordings",
+            "artist-credits"
         ];
 
         let result = self.lookup_by_disc_id(&id, &includes);
@@ -172,7 +190,7 @@ impl MusicBrainzClient {
         
         let album_tracks = self.parse_album_tracks(tracks);
 
-        let album = Album { title, country, tracks: album_tracks };
+        let album = Album { title, country, tracks: album_tracks, artist: self.parse_artist(&release.artist_credit) };
 
         Some(album)
     }
@@ -205,12 +223,30 @@ impl MusicBrainzClient {
 
         result
     }
+
+    fn parse_artist(&self, artist_credit: &Option<Vec<ArtistCredit>>) -> String {
+        let Some(artist_credit) = artist_credit else {
+            return "Unknown artist".to_string();
+        };
+
+        if artist_credit.is_empty() {
+            return "Unknown artist".to_string();
+        }
+
+        // TODO: add other credited artists
+        let Some(artist) = artist_credit.get(0) else {
+            return "Unknown artist".to_string();
+        };
+
+        return artist.name.clone();
+    }
 }
 
 #[derive(Debug)]
 pub struct Album {
     pub title: String,
     pub country: String,
+    pub artist: String,
     pub tracks: Vec<AlbumTrack>,
 }
 

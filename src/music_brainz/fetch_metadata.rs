@@ -194,6 +194,7 @@ impl MusicBrainzClient {
             tracks: album_tracks,
             artist: self.parse_artist(&release.artist_credit),
             date,
+            front_cover_url: self.parse_cover_art(release)
         };
 
         Some(album)
@@ -244,6 +245,18 @@ impl MusicBrainzClient {
 
         return artist.name.clone();
     }
+
+    fn parse_cover_art(&self, release: &Release) -> Option<String> {
+        let Some(cover_art) = &release.cover_art_archive else {
+            return None;
+        };
+
+        if cover_art.front == true {
+            return Some(format!("https://coverartarchive.org/release/{}/front", release.id));
+        }
+
+        return None;
+    }
 }
 
 #[derive(Debug)]
@@ -253,6 +266,7 @@ pub struct Album {
     pub date: String,
     pub artist: String,
     pub tracks: Vec<AlbumTrack>,
+    pub front_cover_url: Option<String>
 }
 
 #[derive(Debug)]

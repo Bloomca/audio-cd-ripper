@@ -1,8 +1,11 @@
 use std::env;
 use std::fs;
+use std::io::Read;
 use std::io::Result;
 use std::io::Write;
 use std::path::PathBuf;
+use std::time::Duration;
+use ureq;
 
 use crate::music_brainz::{Album, AlbumTrack};
 use cd_da_reader::{CdReader, Toc};
@@ -24,6 +27,15 @@ pub fn write_album(album: &Album, reader: &CdReader, toc: &Toc) -> Result<()> {
         let track_num = track.num.try_into().unwrap();
         let track_data = reader.read_track(toc, track_num)?;
         save_raw_data_as_flac(new_dir.join(&track.title), track_data, track, album);
+    }
+
+    match fetch_album_art(album, &new_dir) {
+        Ok(_) => {
+            // pass, the success message is baked into the file
+        },
+        Err(error) => {
+             println!("{:#?}", error);
+        },
     }
 
     Ok(())
@@ -93,4 +105,45 @@ fn update_track_metadata(
 
         Ok::<(), flac_codec::Error>(())
     })
+}
+
+fn fetch_album_art(
+    album: &Album,
+    directory_path: &PathBuf,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    let Some(front_cover_url) = &album.front_cover_url else {
+        return Ok(());
+    };
+
+    let user_agent = "audio-cd-ripper/0.1.0 (mail@bloomca.me)";
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .timeout_global(Some(Duration::from_secs(15)))
+        .build()
+        .into();
+
+    let response = agent
+        .get(front_cover_url)
+        .header("User-Agent", user_agent)
+        .call()?;
+
+    let content_type = response.headers().get("content-type");
+
+    let ext = match content_type {
+        Some(value) => match value.to_str().unwrap_or("image/jpeg") {
+            "image/png" => "png",
+            "image/jpeg" | "image/jpg" => "jpg",
+            _ => "jpg",
+        },
+        None => "jpg",
+    };
+
+    let mut bytes = Vec::new();
+    response.into_body().into_reader().read_to_end(&mut bytes)?;
+
+    let file_path = directory_path.join(format!("folder.{ext}"));
+    let mut file = fs::File::create(&file_path)?;
+    file.write_all(&bytes)?;
+
+    println!("Cover art saved to: {}", file_path.display());
+    Ok(())
 }

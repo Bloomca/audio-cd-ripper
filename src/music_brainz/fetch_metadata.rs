@@ -29,7 +29,6 @@ pub struct CoverArtArchive {
 #[derive(Debug, Deserialize)]
 pub struct Medium {
     pub format: Option<String>, // "CD", etc.
-    #[serde(rename = "track-count")]
     pub tracks: Option<Vec<Track>>,
 }
 

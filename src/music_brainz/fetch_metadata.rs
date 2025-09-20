@@ -1,13 +1,13 @@
+use super::calculate_id;
+use cd_da_reader::Toc;
 use serde::Deserialize;
 use std::time::Duration;
-use cd_da_reader::Toc;
-use super::calculate_id;
 
 use ureq;
 
 #[derive(Debug, Deserialize)]
 pub struct MusicBrainzResponse {
-    pub releases: Option<Vec<Release>>
+    pub releases: Option<Vec<Release>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -30,7 +30,7 @@ pub struct ReleaseGroup {
     pub id: String,
     pub title: Option<String>,
     #[serde(rename = "primary-type")]
-    pub primary_type: Option<String>
+    pub primary_type: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -43,7 +43,7 @@ pub struct CoverArtArchive {
 
 #[derive(Debug, Deserialize)]
 pub struct Medium {
-    pub format: Option<String>,          // "CD", etc.
+    pub format: Option<String>, // "CD", etc.
     pub position: Option<u32>,
     #[serde(rename = "track-count")]
     pub track_count: Option<u32>,
@@ -53,22 +53,22 @@ pub struct Medium {
 #[derive(Debug, Deserialize)]
 pub struct Track {
     pub id: String,
-    pub number: Option<String>,          // "1", "2", …
+    pub number: Option<String>, // "1", "2", …
     pub title: Option<String>,
-    pub length: Option<u32>,             // ms
+    pub length: Option<u32>, // ms
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ArtistCredit {
-    pub name: String,                    // credited name on this release/track
-    pub joinphrase: Option<String>,      // " & ", " feat. ", etc.
-    pub artist: Option<Artist>,          // canonical artist entity
+    pub name: String,               // credited name on this release/track
+    pub joinphrase: Option<String>, // " & ", " feat. ", etc.
+    pub artist: Option<Artist>,     // canonical artist entity
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Artist {
-    pub id: String,                      // MBID
-    pub name: String,                    // canonical name
+    pub id: String,   // MBID
+    pub name: String, // canonical name
     #[serde(rename = "sort-name")]
     pub sort_name: Option<String>,
 }
@@ -78,7 +78,7 @@ pub enum MusicBrainzError {
     Network(ureq::Error),
     Parse(serde_json::Error),
     NotFound,
-    RateLimited
+    RateLimited,
 }
 
 impl From<ureq::Error> for MusicBrainzError {
@@ -141,10 +141,7 @@ impl MusicBrainzClient {
 
         println!("MusicBrainzId: {id}");
 
-        let includes: Vec<&str> = vec![
-            "recordings",
-            "artist-credits"
-        ];
+        let includes: Vec<&str> = vec!["recordings", "artist-credits"];
 
         let result = self.lookup_by_disc_id(&id, &includes);
 
@@ -160,7 +157,7 @@ impl MusicBrainzClient {
                 println!("{:#?}", error);
 
                 None
-            },
+            }
         }
     }
 
@@ -179,6 +176,7 @@ impl MusicBrainzClient {
 
         let title = release.title.clone();
         let country = release.country.clone().unwrap_or("unknown".to_string());
+        let date = release.date.clone().unwrap_or("Unknown date".to_string());
 
         let Some(cd_media) = self.find_cd_media(&release.media) else {
             return None;
@@ -187,10 +185,16 @@ impl MusicBrainzClient {
         let Some(tracks) = &cd_media.tracks else {
             return None;
         };
-        
+
         let album_tracks = self.parse_album_tracks(tracks);
 
-        let album = Album { title, country, tracks: album_tracks, artist: self.parse_artist(&release.artist_credit) };
+        let album = Album {
+            title,
+            country,
+            tracks: album_tracks,
+            artist: self.parse_artist(&release.artist_credit),
+            date,
+        };
 
         Some(album)
     }
@@ -246,6 +250,7 @@ impl MusicBrainzClient {
 pub struct Album {
     pub title: String,
     pub country: String,
+    pub date: String,
     pub artist: String,
     pub tracks: Vec<AlbumTrack>,
 }
@@ -271,6 +276,10 @@ impl AlbumTrack {
 
         let track_len = track.length.unwrap_or(0);
 
-        Some(Self { num: parsed_track_num, title, len: track_len })
+        Some(Self {
+            num: parsed_track_num,
+            title,
+            len: track_len,
+        })
     }
 }

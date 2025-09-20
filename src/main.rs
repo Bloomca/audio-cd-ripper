@@ -1,7 +1,7 @@
-mod get_drive_letter;
-mod read_drive;
-mod music_brainz;
 mod album_writer;
+mod get_drive_letter;
+mod music_brainz;
+mod read_drive;
 
 fn main() {
     let drives = get_drive_letter::get_drive_letter();

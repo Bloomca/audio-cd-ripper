@@ -52,7 +52,10 @@ pub fn write_album(album: &Album, reader: &CdReader, toc: &Toc) -> Result<()> {
             }
         };
 
-        println!("Successfully wrote the track #{}: {}", track_num, &track.title);
+        println!(
+            "Successfully wrote the track #{}: {}",
+            track_num, &track.title
+        );
     }
 
     match fetch_album_art(album, &new_dir) {

@@ -1,0 +1,30 @@
+name: pr-test-workflow
+run-name: Formatter, linter and test checks
+
+on:
+  push:
+        branches:
+            - main
+  pull_request:
+
+jobs:
+  run-tests:
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Run tests
+        run: cargo test
+        env:
+          RUST_BACKTRACE: 1

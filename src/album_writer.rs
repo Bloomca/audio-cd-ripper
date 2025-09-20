@@ -3,9 +3,8 @@ use std::fs;
 use std::io::Read;
 use std::io::Result;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
-use ureq;
 
 use crate::music_brainz::{Album, AlbumTrack};
 use cd_da_reader::{CdReader, Toc};
@@ -52,7 +51,10 @@ pub fn write_album(album: &Album, reader: &CdReader, toc: &Toc) -> Result<()> {
             }
         };
 
-        println!("Successfully wrote the track #{}: {}", track_num, &track.title);
+        println!(
+            "Successfully wrote the track #{}: {}",
+            track_num, &track.title
+        );
     }
 
     match fetch_album_art(album, &new_dir) {
@@ -141,7 +143,7 @@ fn update_track_metadata(
 
 fn fetch_album_art(
     album: &Album,
-    directory_path: &PathBuf,
+    directory_path: &Path,
 ) -> std::result::Result<(), Box<dyn std::error::Error>> {
     let Some(front_cover_url) = &album.front_cover_url else {
         return Ok(());

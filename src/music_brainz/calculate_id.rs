@@ -11,7 +11,7 @@ pub fn calculate_music_brainz_id(toc: &Toc) -> String {
     hasher.update(toc_string.as_bytes());
     let hash_result = hasher.finalize();
 
-    let base64_result = general_purpose::STANDARD.encode(&hash_result);
+    let base64_result = general_purpose::STANDARD.encode(hash_result);
 
     // Convert to MusicBrainz format: replace + with . and / with _, remove padding
     base64_result

@@ -16,8 +16,6 @@ pub struct Release {
     pub title: String,
     pub date: Option<String>,
     pub country: Option<String>,
-    #[serde(rename = "release-group")]
-    pub release_group: Option<ReleaseGroup>,
     #[serde(rename = "cover-art-archive")]
     pub cover_art_archive: Option<CoverArtArchive>,
     pub media: Option<Vec<Medium>>,
@@ -26,56 +24,33 @@ pub struct Release {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ReleaseGroup {
-    pub id: String,
-    pub title: Option<String>,
-    #[serde(rename = "primary-type")]
-    pub primary_type: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct CoverArtArchive {
-    pub artwork: bool,
-    pub count: u32,
     pub front: bool,
-    pub back: bool,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Medium {
     pub format: Option<String>, // "CD", etc.
-    pub position: Option<u32>,
     #[serde(rename = "track-count")]
-    pub track_count: Option<u32>,
     pub tracks: Option<Vec<Track>>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Track {
-    pub id: String,
     pub number: Option<String>, // "1", "2", …
     pub title: Option<String>,
-    pub length: Option<u32>, // ms
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ArtistCredit {
-    pub name: String,               // credited name on this release/track
-    pub joinphrase: Option<String>, // " & ", " feat. ", etc.
-    pub artist: Option<Artist>,     // canonical artist entity
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Artist {
-    pub id: String,   // MBID
-    pub name: String, // canonical name
-    #[serde(rename = "sort-name")]
-    pub sort_name: Option<String>,
+    pub name: String,
 }
 
 #[derive(Debug)]
 pub enum MusicBrainzError {
+    #[allow(dead_code)]
     Network(ureq::Error),
+    #[allow(dead_code)]
     Parse(serde_json::Error),
     NotFound,
     RateLimited,
@@ -188,7 +163,7 @@ impl MusicBrainzClient {
             tracks: album_tracks,
             artist: self.parse_artist(&release.artist_credit),
             date,
-            front_cover_url: self.parse_cover_art(release)
+            front_cover_url: self.parse_cover_art(release),
         };
 
         Some(album)
@@ -246,7 +221,10 @@ impl MusicBrainzClient {
         };
 
         if cover_art.front == true {
-            return Some(format!("https://coverartarchive.org/release/{}/front", release.id));
+            return Some(format!(
+                "https://coverartarchive.org/release/{}/front",
+                release.id
+            ));
         }
 
         return None;
@@ -260,14 +238,13 @@ pub struct Album {
     pub date: String,
     pub artist: String,
     pub tracks: Vec<AlbumTrack>,
-    pub front_cover_url: Option<String>
+    pub front_cover_url: Option<String>,
 }
 
 #[derive(Debug)]
 pub struct AlbumTrack {
     pub num: u32,
     pub title: String,
-    pub len: u32,
 }
 
 impl AlbumTrack {
@@ -282,12 +259,9 @@ impl AlbumTrack {
 
         let title = track.title.clone().unwrap_or("unknown track".to_string());
 
-        let track_len = track.length.unwrap_or(0);
-
         Some(Self {
             num: parsed_track_num,
             title,
-            len: track_len,
         })
     }
 }

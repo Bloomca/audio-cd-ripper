@@ -3,8 +3,6 @@ use cd_da_reader::Toc;
 use serde::Deserialize;
 use std::time::Duration;
 
-use ureq;
-
 #[derive(Debug, Deserialize)]
 pub struct MusicBrainzResponse {
     pub releases: Option<Vec<Release>>,
@@ -139,17 +137,13 @@ impl MusicBrainzClient {
             return None;
         }
 
-        let Some(release) = releases.get(0) else {
-            return None;
-        };
+        let release = releases.first()?;
 
         let title = release.title.clone();
         let country = release.country.clone().unwrap_or("unknown".to_string());
         let date = release.date.clone().unwrap_or("Unknown date".to_string());
 
-        let Some(cd_media) = self.find_cd_media(&release.media) else {
-            return None;
-        };
+        let cd_media = self.find_cd_media(&release.media)?;
 
         let Some(tracks) = &cd_media.tracks else {
             return None;
@@ -176,14 +170,14 @@ impl MusicBrainzClient {
         };
 
         for medium in mediums {
-            if let Some(medium_format) = &medium.format {
-                if medium_format == "CD" {
-                    return Some(medium);
-                }
+            if let Some(medium_format) = &medium.format
+                && medium_format == "CD"
+            {
+                return Some(medium);
             }
         }
 
-        return None;
+        None
     }
 
     fn parse_album_tracks(&self, tracks: &Vec<Track>) -> Vec<AlbumTrack> {
@@ -208,11 +202,11 @@ impl MusicBrainzClient {
         }
 
         // TODO: add other credited artists
-        let Some(artist) = artist_credit.get(0) else {
+        let Some(artist) = artist_credit.first() else {
             return "Unknown artist".to_string();
         };
 
-        return artist.name.clone();
+        artist.name.clone()
     }
 
     fn parse_cover_art(&self, release: &Release) -> Option<String> {
@@ -220,14 +214,14 @@ impl MusicBrainzClient {
             return None;
         };
 
-        if cover_art.front == true {
+        if cover_art.front {
             return Some(format!(
                 "https://coverartarchive.org/release/{}/front",
                 release.id
             ));
         }
 
-        return None;
+        None
     }
 }
 

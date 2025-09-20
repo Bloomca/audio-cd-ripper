@@ -119,7 +119,7 @@ impl MusicBrainzClient {
         Ok(response)
     }
 
-    pub fn lookup_metadata(&self, toc: &Toc) {
+    pub fn lookup_metadata(&self, toc: &Toc) -> Option<Album> {
         let id = calculate_id::calculate_music_brainz_id(toc);
 
         println!("MusicBrainzId: {id}");
@@ -132,12 +132,16 @@ impl MusicBrainzClient {
 
         match result {
             Ok(response) => {
-                let album_data = self.parse_metadata(&response);
+                let album_data: Option<Album> = self.parse_metadata(&response);
 
                 println!("{:#?}", album_data);
+
+                album_data
             }
             Err(error) => {
                 println!("{:#?}", error);
+
+                None
             },
         }
     }

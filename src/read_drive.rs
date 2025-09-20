@@ -1,5 +1,5 @@
 use std::io::{Result, Error};
-use crate::music_brainz::MusicBrainzClient;
+use crate::music_brainz::{Album, MusicBrainzClient};
 use crate::album_writer::write_album;
 
 use cd_da_reader::CdReader;
@@ -16,8 +16,15 @@ pub fn read_drive(letter: &str) -> Result<()> {
         return Err(Error::other("could not get album data"));
     };
 
+    print_album_info(&album);
+
     write_album(&album, &reader, &toc)?;
 
     Ok(())
+}
+
+fn print_album_info(album: &Album) {
+    println!("Found album {} by {} from {}, {} release", album.title, album.artist, album.date, album.country);
+    println!("There are {} tracks total", album.tracks.len());
 }
 

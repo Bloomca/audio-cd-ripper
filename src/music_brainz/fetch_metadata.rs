@@ -146,13 +146,7 @@ impl MusicBrainzClient {
         let result = self.lookup_by_disc_id(&id, &includes);
 
         match result {
-            Ok(response) => {
-                let album_data: Option<Album> = self.parse_metadata(&response);
-
-                println!("{:#?}", album_data);
-
-                album_data
-            }
+            Ok(response) => self.parse_metadata(&response),
             Err(error) => {
                 println!("{:#?}", error);
 

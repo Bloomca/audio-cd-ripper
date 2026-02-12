@@ -18,7 +18,7 @@ use flac_codec::{
 pub fn write_album(album: &Album, reader: &CdReader, toc: &Toc) -> Result<()> {
     let current_dir = env::current_dir()?;
 
-    let new_dir = current_dir.join(&album.title);
+    let new_dir = current_dir.join(sanitize_title(&album.title));
 
     if new_dir.exists() {
         println!("Folder {} already exists, quitting", new_dir.display());
@@ -42,7 +42,7 @@ pub fn write_album(album: &Album, reader: &CdReader, toc: &Toc) -> Result<()> {
 
         match reader.read_track(toc, track_num) {
             Ok(track_data) => {
-                save_raw_data_as_flac(new_dir.join(&track.title), track_data, track, album)
+                save_raw_data_as_flac(new_dir.join(sanitize_title(&track.title)), track_data, track, album)
             }
             Err(error) => {
                 println!("Could not read track #{}, {}", track_num, &track.title);
@@ -180,4 +180,10 @@ fn fetch_album_art(
 
     println!("Cover art saved to: {}", file_path.display());
     Ok(())
+}
+
+fn sanitize_title(title: &str) -> String {
+    // at least Windows prohibits these characters
+    const FORBIDDEN: &[char] = &['\\', '/', ':', '*', '?', '"', '<', '>', '|'];
+    title.chars().filter(|c| !FORBIDDEN.contains(c)).collect()
 }

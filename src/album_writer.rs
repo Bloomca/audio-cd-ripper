@@ -22,18 +22,8 @@ pub fn write_album(
     selected_tracks: Option<&[u8]>,
 ) -> Result<()> {
     let current_dir = env::current_dir()?;
-
     let new_dir = current_dir.join(sanitize_title(&album.title));
-
-    if new_dir.exists() {
-        println!("Folder {} already exists, quitting", new_dir.display());
-        return Ok(());
-    }
-
-    println!("Creating new folder for the album: {}", new_dir.display());
-
-    fs::create_dir(new_dir.as_path())?;
-    let mut failed_tracks: Vec<(u8, String)> = Vec::new();
+    let mut all_requested_tracks: Vec<(u8, &AlbumTrack)> = Vec::new();
 
     for track in &album.tracks {
         let Ok(track_num) = track.num.try_into() else {
@@ -50,6 +40,49 @@ pub fn write_album(
             continue;
         }
 
+        all_requested_tracks.push((track_num, track));
+    }
+
+    if new_dir.exists() {
+        println!(
+            "Folder {} already exists, checking for missing files",
+            new_dir.display()
+        );
+    } else {
+        println!("Creating new folder for the album: {}", new_dir.display());
+        fs::create_dir(new_dir.as_path())?;
+    }
+
+    let mut tracks_to_rip: Vec<(u8, &AlbumTrack)> = Vec::new();
+    for (track_num, track) in &all_requested_tracks {
+        let track_path = track_file_path(&new_dir, track);
+        if !track_path.exists() {
+            tracks_to_rip.push((*track_num, *track));
+        }
+    }
+
+    let artwork_missing = !has_album_art(&new_dir);
+    if tracks_to_rip.is_empty() && !artwork_missing {
+        println!(
+            "All requested tracks and artwork already exist in {}, nothing else to do",
+            new_dir.display()
+        );
+        return Ok(());
+    }
+
+    if !tracks_to_rip.is_empty() {
+        println!("Missing {} track(s), starting rip", tracks_to_rip.len());
+    } else {
+        println!("All requested tracks already exist, only artwork is missing");
+    }
+
+    if !artwork_missing {
+        println!("Artwork already exists, skipping cover download");
+    }
+
+    let mut failed_tracks: Vec<(u8, String)> = Vec::new();
+
+    for (track_num, track) in tracks_to_rip {
         println!("Writing a track #{}: {}", track_num, &track.title);
 
         match reader.read_track(toc, track_num) {
@@ -82,18 +115,20 @@ pub fn write_album(
         }
     }
 
-    match fetch_album_art(album, &new_dir) {
-        Ok(_) => {
-            // pass, the success message is baked into the file
+    if artwork_missing {
+        match fetch_album_art(album, &new_dir) {
+            Ok(_) => {
+                // pass, the success message is baked into the file
+            }
+            Err(error) => {
+                println!(
+                    "Could not fetch cover art for {} by {}",
+                    &album.title, &album.artist
+                );
+                println!("{:#?}", error);
+            }
         }
-        Err(error) => {
-            println!(
-                "Could not fetch cover art for {} by {}",
-                &album.title, &album.artist
-            );
-            println!("{:#?}", error);
-        }
-    }
+    };
 
     if failed_tracks.is_empty() {
         println!("Successfully saved the album data");
@@ -209,6 +244,18 @@ fn fetch_album_art(
 
     println!("Cover art saved to: {}", file_path.display());
     Ok(())
+}
+
+fn has_album_art(directory_path: &Path) -> bool {
+    directory_path.join("folder.jpg").exists()
+        || directory_path.join("folder.jpeg").exists()
+        || directory_path.join("folder.png").exists()
+}
+
+fn track_file_path(directory_path: &Path, track: &AlbumTrack) -> PathBuf {
+    directory_path
+        .join(sanitize_title(&track.title))
+        .with_extension("flac")
 }
 
 fn sanitize_title(title: &str) -> String {

@@ -1,6 +1,5 @@
 use std::env;
 use std::fs;
-use std::io::Error;
 use std::io::Read;
 use std::io::Result;
 use std::io::Write;
@@ -29,6 +28,7 @@ pub fn write_album(album: &Album, reader: &CdReader, toc: &Toc) -> Result<()> {
     println!("Creating new folder for the album: {}", new_dir.display());
 
     fs::create_dir(new_dir.as_path())?;
+    let mut failed_tracks: Vec<(u8, String)> = Vec::new();
 
     for track in &album.tracks {
         let Ok(track_num) = track.num.try_into() else {
@@ -42,13 +42,17 @@ pub fn write_album(album: &Album, reader: &CdReader, toc: &Toc) -> Result<()> {
         println!("Writing a track #{}: {}", track_num, &track.title);
 
         match reader.read_track(toc, track_num) {
-            Ok(track_data) => {
-                save_raw_data_as_flac(new_dir.join(sanitize_title(&track.title)), track_data, track, album)
-            }
+            Ok(track_data) => save_raw_data_as_flac(
+                new_dir.join(sanitize_title(&track.title)),
+                track_data,
+                track,
+                album,
+            ),
             Err(error) => {
                 println!("Could not read track #{}, {}", track_num, &track.title);
                 println!("Error: {:#?}", error);
-                return Err(Error::other(error.to_string()));
+                failed_tracks.push((track_num, track.title.clone()));
+                continue;
             }
         };
 
@@ -56,6 +60,15 @@ pub fn write_album(album: &Album, reader: &CdReader, toc: &Toc) -> Result<()> {
             "Successfully wrote the track #{}: {}",
             track_num, &track.title
         );
+    }
+
+    if failed_tracks.is_empty() {
+        println!("All tracks were read successfully");
+    } else {
+        println!("Failed to read {} track(s):", failed_tracks.len());
+        for (track_num, track_title) in &failed_tracks {
+            println!("#{} {}", track_num, track_title);
+        }
     }
 
     match fetch_album_art(album, &new_dir) {
@@ -71,7 +84,11 @@ pub fn write_album(album: &Album, reader: &CdReader, toc: &Toc) -> Result<()> {
         }
     }
 
-    println!("Successfully saved the album data");
+    if failed_tracks.is_empty() {
+        println!("Successfully saved the album data");
+    } else {
+        println!("Successfully saved some album data");
+    }
 
     Ok(())
 }

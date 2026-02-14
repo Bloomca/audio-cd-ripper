@@ -14,11 +14,18 @@ pub struct Release {
     pub title: String,
     pub date: Option<String>,
     pub country: Option<String>,
+    pub genres: Option<Vec<Genre>>,
+    pub tags: Option<Vec<Genre>>,
     #[serde(rename = "cover-art-archive")]
     pub cover_art_archive: Option<CoverArtArchive>,
     pub media: Option<Vec<Medium>>,
     #[serde(rename = "artist-credit")]
     pub artist_credit: Option<Vec<ArtistCredit>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Genre {
+    pub name: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -113,7 +120,7 @@ impl MusicBrainzClient {
 
         println!("MusicBrainzId: {id}");
 
-        let includes: Vec<&str> = vec!["recordings", "artist-credits"];
+        let includes: Vec<&str> = vec!["recordings", "artist-credits", "genres"];
 
         let result = self.lookup_by_disc_id(&id, &includes);
 
@@ -156,6 +163,7 @@ impl MusicBrainzClient {
             tracks: album_tracks,
             artist: self.parse_artist(&release.artist_credit),
             date,
+            genres: self.parse_genres(release),
             front_cover_url: self.parse_cover_art(release),
         };
 
@@ -222,6 +230,22 @@ impl MusicBrainzClient {
 
         None
     }
+
+    fn parse_genres(&self, release: &Release) -> Vec<String> {
+        let genre_source = release.genres.as_ref().or(release.tags.as_ref());
+        let Some(genre_source) = genre_source else {
+            return Vec::new();
+        };
+
+        let mut genres: Vec<String> = genre_source
+            .iter()
+            .map(|genre| genre.name.clone())
+            .filter(|name| !name.trim().is_empty())
+            .collect();
+        genres.sort();
+        genres.dedup();
+        genres
+    }
 }
 
 #[derive(Debug)]
@@ -230,6 +254,7 @@ pub struct Album {
     pub country: String,
     pub date: String,
     pub artist: String,
+    pub genres: Vec<String>,
     pub tracks: Vec<AlbumTrack>,
     pub front_cover_url: Option<String>,
 }

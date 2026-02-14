@@ -209,6 +209,9 @@ fn update_track_metadata(
             vorbis_comment.set("TRACKNUMBER", track.num);
             vorbis_comment.set("DATE", &album.date);
             vorbis_comment.set("COUNTRY", &album.country);
+            if !album.genres.is_empty() {
+                vorbis_comment.set("GENRE", album.genres.join(", "));
+            }
         });
 
         Ok::<(), flac_codec::Error>(())

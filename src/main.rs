@@ -4,9 +4,11 @@ mod read_drive;
 
 use cd_da_reader::CdReader;
 use std::env;
+use std::path::PathBuf;
 
 fn main() {
     let args = parse_args();
+    let out_dir = resolve_out_dir(args.out.as_deref());
 
     let disk = match args.disk {
         Some(disk) => disk,
@@ -19,17 +21,19 @@ fn main() {
         },
     };
 
-    read_drive(&disk, args.tracks.as_deref());
+    read_drive(&disk, args.tracks.as_deref(), &out_dir);
 }
 
 struct CliArgs {
     disk: Option<String>,
     tracks: Option<Vec<u8>>,
+    out: Option<String>,
 }
 
 fn parse_args() -> CliArgs {
     let mut disk: Option<String> = None;
     let mut tracks: Option<Vec<u8>> = None;
+    let mut out: Option<String> = None;
     let mut args = env::args().skip(1);
 
     while let Some(arg) = args.next() {
@@ -62,9 +66,24 @@ fn parse_args() -> CliArgs {
             tracks = Some(parse_tracks(&value));
             continue;
         }
+
+        if let Some(value) = arg.strip_prefix("--out=") {
+            out = Some(value.to_string());
+            continue;
+        }
+
+        if arg == "--out" {
+            let Some(value) = args.next() else {
+                println!("Expected a value after --out");
+                std::process::exit(2);
+            };
+
+            out = Some(value);
+            continue;
+        }
     }
 
-    CliArgs { disk, tracks }
+    CliArgs { disk, tracks, out }
 }
 
 fn parse_tracks(value: &str) -> Vec<u8> {
@@ -129,8 +148,33 @@ fn detect_disk() -> Option<String> {
     audio_drives.into_iter().next()
 }
 
-fn read_drive(letter: &str, tracks: Option<&[u8]>) {
-    let result = read_drive::read_drive(letter, tracks);
+fn resolve_out_dir(out: Option<&str>) -> PathBuf {
+    let path = match out {
+        Some(raw_path) => PathBuf::from(raw_path),
+        None => match env::current_dir() {
+            Ok(current_dir) => current_dir,
+            Err(error) => {
+                println!("Failed to resolve current directory: {error}");
+                std::process::exit(1);
+            }
+        },
+    };
+
+    if !path.exists() {
+        println!("Output directory does not exist: {}", path.display());
+        std::process::exit(2);
+    }
+
+    if !path.is_dir() {
+        println!("Output path is not a directory: {}", path.display());
+        std::process::exit(2);
+    }
+
+    path
+}
+
+fn read_drive(letter: &str, tracks: Option<&[u8]>, out_dir: &PathBuf) {
+    let result = read_drive::read_drive(letter, tracks, out_dir.as_path());
 
     if result.is_err() {
         println!("Error while reading drive {}", letter);

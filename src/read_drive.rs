@@ -8,7 +8,7 @@ pub fn read_drive(letter: &str) -> Result<()> {
     println!("Drive with a CD: {letter}");
 
     let reader = CdReader::open(letter)?;
-    let toc = reader.read_toc()?;
+    let toc = reader.read_toc().map_err(|error| Error::other(error.to_string()))?;
 
     let client = MusicBrainzClient::new("audio-cd-ripper", "0.1.0", "mail@bloomca.me");
 

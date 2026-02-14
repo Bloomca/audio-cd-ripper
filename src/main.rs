@@ -70,7 +70,10 @@ fn detect_disk() -> Option<String> {
     }
 
     if audio_drives.len() > 1 {
-        println!("Found multiple drives with an audio CD: {:#?}", audio_drives);
+        println!(
+            "Found multiple drives with an audio CD: {:#?}",
+            audio_drives
+        );
         println!("Trying to use the first one");
     }
 

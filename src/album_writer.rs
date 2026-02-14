@@ -1,5 +1,6 @@
 use std::env;
 use std::fs;
+use std::io::Error;
 use std::io::Read;
 use std::io::Result;
 use std::io::Write;
@@ -47,7 +48,7 @@ pub fn write_album(album: &Album, reader: &CdReader, toc: &Toc) -> Result<()> {
             Err(error) => {
                 println!("Could not read track #{}, {}", track_num, &track.title);
                 println!("Error: {:#?}", error);
-                return Err(error);
+                return Err(Error::other(error.to_string()));
             }
         };
 

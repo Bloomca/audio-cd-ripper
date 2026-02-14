@@ -1,10 +1,11 @@
 use crate::album_writer::write_album;
 use crate::music_brainz::{Album, MusicBrainzClient};
 use std::io::{Error, Result};
+use std::path::Path;
 
 use cd_da_reader::CdReader;
 
-pub fn read_drive(letter: &str, tracks: Option<&[u8]>) -> Result<()> {
+pub fn read_drive(letter: &str, tracks: Option<&[u8]>, out_dir: &Path) -> Result<()> {
     println!("Drive with a CD: {letter}");
 
     let reader = CdReader::open(letter)?;
@@ -24,7 +25,7 @@ pub fn read_drive(letter: &str, tracks: Option<&[u8]>) -> Result<()> {
         println!("Only ripping selected tracks: {selected_tracks:?}");
     }
 
-    write_album(&album, &reader, &toc, tracks)?;
+    write_album(&album, &reader, &toc, tracks, out_dir)?;
 
     Ok(())
 }

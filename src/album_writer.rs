@@ -1,4 +1,3 @@
-use std::env;
 use std::fs;
 use std::io::Read;
 use std::io::Result;
@@ -20,9 +19,9 @@ pub fn write_album(
     reader: &CdReader,
     toc: &Toc,
     selected_tracks: Option<&[u8]>,
+    out_dir: &Path,
 ) -> Result<()> {
-    let current_dir = env::current_dir()?;
-    let new_dir = current_dir.join(sanitize_title(&album.title));
+    let new_dir = out_dir.join(sanitize_title(&album.title));
     let mut all_requested_tracks: Vec<(u8, &AlbumTrack)> = Vec::new();
 
     for track in &album.tracks {

@@ -20,6 +20,7 @@ pub fn write_album(
     toc: &Toc,
     selected_tracks: Option<&[u8]>,
     out_dir: &Path,
+    skip_artwork: bool,
 ) -> Result<()> {
     let new_dir = out_dir.join(sanitize_title(&album.title));
     let mut all_requested_tracks: Vec<(u8, &AlbumTrack)> = Vec::new();
@@ -61,11 +62,19 @@ pub fn write_album(
     }
 
     let artwork_missing = !has_album_art(&new_dir);
-    if tracks_to_rip.is_empty() && !artwork_missing {
-        println!(
-            "All requested tracks and artwork already exist in {}, nothing else to do",
-            new_dir.display()
-        );
+    let should_fetch_artwork = !skip_artwork && artwork_missing;
+    if tracks_to_rip.is_empty() && !should_fetch_artwork {
+        if skip_artwork {
+            println!(
+                "All requested tracks already exist in {}, nothing else to do",
+                new_dir.display()
+            );
+        } else {
+            println!(
+                "All requested tracks and artwork already exist in {}, nothing else to do",
+                new_dir.display()
+            );
+        }
         return Ok(());
     }
 
@@ -75,7 +84,9 @@ pub fn write_album(
         println!("All requested tracks already exist, only artwork is missing");
     }
 
-    if !artwork_missing {
+    if skip_artwork {
+        println!("Skipping artwork download as requested");
+    } else if !artwork_missing {
         println!("Artwork already exists, skipping cover download");
     }
 
@@ -114,7 +125,7 @@ pub fn write_album(
         }
     }
 
-    if artwork_missing {
+    if should_fetch_artwork {
         match fetch_album_art(album, &new_dir) {
             Ok(_) => {
                 // pass, the success message is baked into the file

@@ -1,14 +1,12 @@
 mod album_writer;
+mod cli;
 mod music_brainz;
 mod read_drive;
 
 use cd_da_reader::CdReader;
-use std::env;
-use std::path::PathBuf;
 
 fn main() {
-    let args = parse_args();
-    let out_dir = resolve_out_dir(args.out.as_deref());
+    let args = cli::parse_cli_args();
 
     let disk = match args.disk {
         Some(disk) => disk,
@@ -21,101 +19,12 @@ fn main() {
         },
     };
 
-    read_drive(&disk, args.tracks.as_deref(), &out_dir);
-}
-
-struct CliArgs {
-    disk: Option<String>,
-    tracks: Option<Vec<u8>>,
-    out: Option<String>,
-}
-
-fn parse_args() -> CliArgs {
-    let mut disk: Option<String> = None;
-    let mut tracks: Option<Vec<u8>> = None;
-    let mut out: Option<String> = None;
-    let mut args = env::args().skip(1);
-
-    while let Some(arg) = args.next() {
-        if let Some(value) = arg.strip_prefix("--disk=") {
-            disk = Some(value.to_string());
-            continue;
-        }
-
-        if arg == "--disk" {
-            let Some(value) = args.next() else {
-                println!("Expected a value after --disk");
-                std::process::exit(2);
-            };
-
-            disk = Some(value);
-            continue;
-        }
-
-        if let Some(value) = arg.strip_prefix("--track=") {
-            tracks = Some(parse_tracks(value));
-            continue;
-        }
-
-        if arg == "--track" {
-            let Some(value) = args.next() else {
-                println!("Expected a value after --track");
-                std::process::exit(2);
-            };
-
-            tracks = Some(parse_tracks(&value));
-            continue;
-        }
-
-        if let Some(value) = arg.strip_prefix("--out=") {
-            out = Some(value.to_string());
-            continue;
-        }
-
-        if arg == "--out" {
-            let Some(value) = args.next() else {
-                println!("Expected a value after --out");
-                std::process::exit(2);
-            };
-
-            out = Some(value);
-            continue;
-        }
-    }
-
-    CliArgs { disk, tracks, out }
-}
-
-fn parse_tracks(value: &str) -> Vec<u8> {
-    let mut tracks = Vec::new();
-
-    for part in value.split(',') {
-        let trimmed = part.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-
-        let Ok(track) = trimmed.parse::<u8>() else {
-            println!("Invalid track number in --track: {trimmed}");
-            std::process::exit(2);
-        };
-
-        if track > 99 {
-            println!("Track number out of range in --track: {track} (expected 0..=99)");
-            std::process::exit(2);
-        }
-
-        tracks.push(track);
-    }
-
-    if tracks.is_empty() {
-        println!("--track was provided but no valid track numbers were found");
-        std::process::exit(2);
-    }
-
-    tracks.sort();
-    tracks.dedup();
-    tracks
+    read_drive(
+        &disk,
+        args.tracks.as_deref(),
+        args.out_dir.as_path(),
+        args.skip_artwork,
+    );
 }
 
 fn detect_disk() -> Option<String> {
@@ -148,33 +57,8 @@ fn detect_disk() -> Option<String> {
     audio_drives.into_iter().next()
 }
 
-fn resolve_out_dir(out: Option<&str>) -> PathBuf {
-    let path = match out {
-        Some(raw_path) => PathBuf::from(raw_path),
-        None => match env::current_dir() {
-            Ok(current_dir) => current_dir,
-            Err(error) => {
-                println!("Failed to resolve current directory: {error}");
-                std::process::exit(1);
-            }
-        },
-    };
-
-    if !path.exists() {
-        println!("Output directory does not exist: {}", path.display());
-        std::process::exit(2);
-    }
-
-    if !path.is_dir() {
-        println!("Output path is not a directory: {}", path.display());
-        std::process::exit(2);
-    }
-
-    path
-}
-
-fn read_drive(letter: &str, tracks: Option<&[u8]>, out_dir: &PathBuf) {
-    let result = read_drive::read_drive(letter, tracks, out_dir.as_path());
+fn read_drive(letter: &str, tracks: Option<&[u8]>, out_dir: &std::path::Path, skip_artwork: bool) {
+    let result = read_drive::read_drive(letter, tracks, out_dir, skip_artwork);
 
     if result.is_err() {
         println!("Error while reading drive {}", letter);

@@ -5,7 +5,12 @@ use std::path::Path;
 
 use cd_da_reader::CdReader;
 
-pub fn read_drive(letter: &str, tracks: Option<&[u8]>, out_dir: &Path) -> Result<()> {
+pub fn read_drive(
+    letter: &str,
+    tracks: Option<&[u8]>,
+    out_dir: &Path,
+    skip_artwork: bool,
+) -> Result<()> {
     println!("Drive with a CD: {letter}");
 
     let reader = CdReader::open(letter)?;
@@ -25,7 +30,11 @@ pub fn read_drive(letter: &str, tracks: Option<&[u8]>, out_dir: &Path) -> Result
         println!("Only ripping selected tracks: {selected_tracks:?}");
     }
 
-    write_album(&album, &reader, &toc, tracks, out_dir)?;
+    if skip_artwork {
+        println!("Skipping artwork as requested");
+    }
+
+    write_album(&album, &reader, &toc, tracks, out_dir, skip_artwork)?;
 
     Ok(())
 }

@@ -15,7 +15,12 @@ use flac_codec::{
     metadata::{VorbisComment, update},
 };
 
-pub fn write_album(album: &Album, reader: &CdReader, toc: &Toc) -> Result<()> {
+pub fn write_album(
+    album: &Album,
+    reader: &CdReader,
+    toc: &Toc,
+    selected_tracks: Option<&[u8]>,
+) -> Result<()> {
     let current_dir = env::current_dir()?;
 
     let new_dir = current_dir.join(sanitize_title(&album.title));
@@ -38,6 +43,12 @@ pub fn write_album(album: &Album, reader: &CdReader, toc: &Toc) -> Result<()> {
             );
             continue;
         };
+
+        if let Some(selected_tracks) = selected_tracks
+            && !selected_tracks.contains(&track_num)
+        {
+            continue;
+        }
 
         println!("Writing a track #{}: {}", track_num, &track.title);
 

@@ -6,14 +6,14 @@ use std::path::Path;
 use cd_da_reader::CdReader;
 
 pub fn read_drive(
-    letter: &str,
+    reader: CdReader,
+    drive_label: &str,
     tracks: Option<&[u8]>,
     out_dir: &Path,
     skip_artwork: bool,
 ) -> Result<()> {
-    println!("Drive with a CD: {letter}");
+    println!("Drive with a CD: {drive_label}");
 
-    let reader = CdReader::open(letter)?;
     let toc = reader
         .read_toc()
         .map_err(|error| Error::other(error.to_string()))?;

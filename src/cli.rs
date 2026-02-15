@@ -142,17 +142,21 @@ fn resolve_out_dir(out: Option<&str>) -> PathBuf {
 }
 
 fn print_help() {
-    println!("Audio CD ripper");
-    println!();
-    println!("Usage:");
-    println!("  cargo run -- [OPTIONS]");
-    println!();
-    println!("Options:");
-    println!("  --disk <PATH>        CD drive path (e.g. disk4, \\\\.\\E:, /dev/sr0)");
-    println!("  --track <LIST>       Comma-separated track numbers to rip (0..=99), e.g. 1,2,5");
-    println!("  --out <DIR>          Existing output directory (defaults to current directory)");
-    println!("  --skip-artwork       Skip downloading album artwork");
-    println!("  --help, -h           Show this help message");
+    print!(
+        r#"Audio CD ripper
+
+This is an application to rip your audio CDs to local files. It only supports FLAC at the moment, so even after compression, it will take a decent amount of space. This application is mainly supposed to be used without any parameters, by default it will try to automatically detect an audio drive and will create a new folder in the current directory. It uses MusicBrainz database to fetch metadata, including a cover.
+
+When the application fails to read a sector of a track, it will attempt to retry it multiple times, and in case it does not succeed, only that specific track will be skipped. While running the application again with the same parameters, the application will detect if some data is already processed and will only add new tracks or the cover, if any are missing.
+
+Options:
+  --disk <PATH>        CD drive path (e.g. disk4, \\.\E:, /dev/sr0, depending on the platform)
+  --track <LIST>       Comma-separated track numbers to rip (0..=99), e.g. 1,2,5
+  --out <DIR>          Existing output directory (defaults to current directory)
+  --skip-artwork       Skip downloading album artwork
+  --help, -h           Show this help message
+    "#
+    );
 }
 
 fn exit_with_usage_error(message: &str) -> ! {

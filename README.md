@@ -6,7 +6,24 @@ It uses [rust-cd-da-reader](https://github.com/Bloomca/rust-cd-da-reader) librar
 
 By default, it will try to automatically detect a CD drive with an audio CD in it and will create a folder for the album from where you run it, but you can specify both a specific disk (with a `--disk` argument) and the output folder (with a `--out` argument).
 
-To use it, you need to clone this repository and run the application, so you will need to have [Rust installed](https://www.rust-lang.org/tools/install). It should look like this:
+## Install from crates.io
+
+You can install it directly from [crates.io](https://crates.io/crates/audio-cd-ripper):
+
+```sh
+cargo install audio-cd-ripper
+```
+
+Then run:
+
+```sh
+audio-cd-ripper --help
+audio-cd-ripper
+```
+
+## Run from source
+
+If you want to run from source, clone this repository and run the application (you will need to have [Rust installed](https://www.rust-lang.org/tools/install)):
 
 ```sh
 git clone git@github.com:Bloomca/audio-cd-ripper.git

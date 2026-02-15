@@ -69,9 +69,9 @@ dependencies = [
 
 [[package]]
 name = "cd-da-reader"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e1e33f78e3ea2d4d25513c052bb9d56c9834d8ba28d15a6cda6bd65b7ea3566"
+checksum = "534300c381b8a66845e47e0b3175d98d65be96bf8b8397a8d056f4bfd2bc09a0"
 dependencies = [
  "cc",
  "libc",

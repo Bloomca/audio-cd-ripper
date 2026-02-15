@@ -2,7 +2,9 @@
 
 This is a small CLI application to rip audio CDs into local files. Currently, it only supports [FLAC](https://xiph.org/flac/) (and probably will stay this way).
 
-It uses [rust-cd-da-reader](https://github.com/Bloomca/rust-cd-da-reader) library underneath, so in theory it will be possible to support all major platforms (Windows, macOS and Linux), but right now it works only on Windows. It uses [MusicBrainz](https://musicbrainz.org/) for metadata tags and cover art, if possible. It does not support multi-CD releases.
+It uses [rust-cd-da-reader](https://github.com/Bloomca/rust-cd-da-reader) library underneath, so it works on every major platform (Windows, macOS and Linux). It uses [MusicBrainz](https://musicbrainz.org/) for metadata tags and cover art, if possible.
+
+By default, it will try to automatically detect a CD drive with an audio CD in it and will create a folder for the album from where you run it, but you can specify both a specific disk (with a `--disk` argument) and the output folder (with a `--out` argument).
 
 To use it, you need to clone this repository and run the application, so you will need to have [Rust installed](https://www.rust-lang.org/tools/install). It should look like this:
 

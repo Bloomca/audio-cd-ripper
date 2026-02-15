@@ -2,6 +2,12 @@
 name = "audio-cd-ripper"
 version = "0.2.0"
 edition = "2024"
+description = "Audio CD ripper for Windows, macOS and Linux with automatic metadata fetching"
+repository = "https://github.com/Bloomca/audio-cd-ripper"
+license = "MIT"
+keywords = ["audio-cd", "cd-da", "ripper"]
+categories = ["command-line-utilities", "multimedia::audio"]
+exclude = ["target", "Cargo.lock"]
 
 [dependencies]
 base64 = "0.22.1"

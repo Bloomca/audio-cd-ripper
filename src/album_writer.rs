@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::music_brainz::{Album, AlbumTrack};
-use cd_da_reader::{CdReader, Toc};
+use cd_da_reader::{CdReader, Toc, TrackStreamConfig};
 
 use flac_codec::{
     byteorder::LittleEndian,
@@ -95,7 +95,7 @@ pub fn write_album(
     for (track_num, track) in tracks_to_rip {
         println!("Writing a track #{}: {}", track_num, &track.title);
 
-        match reader.read_track(toc, track_num) {
+        match read_track_with_progress(reader, toc, track_num) {
             Ok(track_data) => save_raw_data_as_flac(
                 new_dir.join(sanitize_title(&track.title)),
                 track_data,
@@ -149,6 +149,66 @@ pub fn write_album(
     Ok(())
 }
 
+fn read_track_with_progress(
+    reader: &CdReader,
+    toc: &Toc,
+    track_num: u8,
+) -> std::result::Result<Vec<u8>, cd_da_reader::CdReaderError> {
+    const CDDA_SECTOR_BYTES: usize = 2352;
+
+    let mut stream = reader.open_track_stream(toc, track_num, TrackStreamConfig::default())?;
+    let total_sectors = stream.total_sectors();
+    let total_secs = stream.total_seconds();
+    let mut data = Vec::with_capacity(total_sectors as usize * CDDA_SECTOR_BYTES);
+    let mut printed_progress = false;
+
+    loop {
+        match stream.next_chunk() {
+            Ok(Some(chunk)) => {
+                data.extend_from_slice(&chunk);
+                print_read_progress(stream.current_seconds(), total_secs);
+                printed_progress = true;
+            }
+            Ok(None) => break,
+            Err(error) => {
+                if printed_progress {
+                    eprintln!();
+                }
+
+                return Err(error);
+            }
+        }
+    }
+
+    print_read_progress(total_secs, total_secs);
+    eprintln!();
+
+    Ok(data)
+}
+
+fn print_read_progress(current_secs: f32, total_secs: f32) {
+    let percent = if total_secs > 0.0 {
+        current_secs / total_secs * 100.0
+    } else {
+        100.0
+    };
+
+    eprint!(
+        "\r  Reading: [{} / {}] {:5.1}%",
+        format_duration(current_secs),
+        format_duration(total_secs),
+        percent.min(100.0)
+    );
+}
+
+fn format_duration(seconds: f32) -> String {
+    let total_seconds = seconds.round() as u32;
+    let minutes = total_seconds / 60;
+    let seconds = total_seconds % 60;
+
+    format!("{minutes:02}:{seconds:02}")
+}
+
 fn save_raw_data_as_flac(
     file_path: PathBuf,
     data: Vec<u8>,
@@ -166,6 +226,8 @@ fn save_raw_data_as_flac(
     let sample_rate = 44_100u32;
     let bits_per_sample = 16u32;
     let channels = 2u8;
+
+    println!("Encoding to FLAC...");
 
     {
         let mut flac_writer: FlacByteWriter<std::io::BufWriter<fs::File>, LittleEndian> =

@@ -33,24 +33,28 @@ cargo run
 
 This will automatically try to detect a CD-ROM with an audio CD; if there are multiple choices, it will try the first one. The output will look something like this:
 
-```powershell
-PS C:\Users\myuser\projects\audio-cd-ripper> cargo run
-Drive with a CD: \\.\E:
-MusicBrainzId: 8QtEp4kVYQ9Aj4BtgduaXiTCqjE-
-Found album Relationship of Command by At the Drive‐In from 2000-09-12, US release
-There are 11 tracks total
-Creating new folder for the album: C:\Users\myuser\projects\audio-cd-ripper\Relationship of Command
-Writing a track #1: Arcarsenal
-Successfully added metadata
-Successfully wrote the track #1: Arcarsenal
-Writing a track #2: Pattern Against User
-Successfully added metadata
-Successfully wrote the track #2: Pattern Against User
-... # (cut tracks in-between for brevity)
-Writing a track #11: Non‐Zero Possibility
-Successfully added metadata
-Successfully wrote the track #11: Non‐Zero Possibility
-Cover art saved to: C:\Users\myuser\projects\audio-cd-ripper\Relationship of Command\folder.jpg
+```sh
+user@mac:~/projects/audo-cd-ripper % cargo run
+Drive with a CD: default drive
+MusicBrainzId: pT9QJuVCB.sW2mIKmcUC7LK9ChU-
+Found album Honeymoon by Lana Del Rey from 2015-09-18, XE release
+There are 14 tracks total
+Creating new folder for the album: /Users/vsevolodzaikov/projects/personal/audio-cd-ripper/Honeymoon
+Missing 14 track(s), starting rip
+
+Writing track #1: Honeymoon
+  Reading and encoding: [05:51 / 05:51] 100.0%
+  Successfully added metadata
+  Successfully wrote the track #1: Honeymoon
+
+...
+
+Writing track #14: Don’t Let Me Be Misunderstood
+  Reading and encoding: [03:04 / 03:04] 100.0%
+  Successfully added metadata
+  Successfully wrote the track #14: Don’t Let Me Be Misunderstood
+All tracks were written successfully
+Cover art saved to: /Users/vsevolodzaikov/projects/personal/audio-cd-ripper/Honeymoon/folder.jpg
 Successfully saved the album data
 Success!
 ```

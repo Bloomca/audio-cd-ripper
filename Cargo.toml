@@ -1,6 +1,6 @@
 [package]
 name = "audio-cd-ripper"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 description = "Audio CD ripper for Windows, macOS and Linux with automatic metadata fetching"
 repository = "https://github.com/Bloomca/audio-cd-ripper"
@@ -11,7 +11,7 @@ exclude = ["target", "Cargo.lock"]
 
 [dependencies]
 base64 = "0.22.1"
-cd-da-reader = "0.3.1"
+cd-da-reader = "0.4.1"
 flac-codec = "1.1.0"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.143"

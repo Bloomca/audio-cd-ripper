@@ -118,7 +118,7 @@ fn format_toc_query(toc: &MusicBrainzTocData<'_>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{calculate_music_brainz_disc, calculate_music_brainz_id};
+    use super::calculate_music_brainz_disc;
     use cd_da_reader::{Toc, Track};
 
     #[test]
@@ -138,7 +138,7 @@ mod tests {
         );
 
         assert_eq!(
-            calculate_music_brainz_id(&toc),
+            calculate_music_brainz_disc(&toc).id,
             "49HHV7Eb8UKF3aQiNmu1GR8vKTY-"
         );
     }

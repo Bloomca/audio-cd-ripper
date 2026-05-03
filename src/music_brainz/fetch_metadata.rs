@@ -95,12 +95,25 @@ impl MusicBrainzClient {
     fn lookup_by_disc_id(
         &self,
         id: &str,
+        toc_query: &str,
         includes: &[&str],
     ) -> Result<MusicBrainzResponse, MusicBrainzError> {
         let mut url: String = format!("https://musicbrainz.org/ws/2/discid/{}", id);
+        let mut query_params = Vec::new();
 
         if !includes.is_empty() {
-            url.push_str(&format!("?inc={}", includes.join("+")));
+            query_params.push(format!("inc={}", includes.join("+")));
+        }
+
+        if !toc_query.is_empty() {
+            query_params.push(format!("toc={toc_query}"));
+            query_params.push("cdstubs=no".to_string());
+            query_params.push("media-format=all".to_string());
+        }
+
+        if !query_params.is_empty() {
+            url.push('?');
+            url.push_str(&query_params.join("&"));
         }
 
         let response = self
@@ -116,13 +129,13 @@ impl MusicBrainzClient {
     }
 
     pub fn lookup_metadata(&self, toc: &Toc) -> Option<Album> {
-        let id = calculate_id::calculate_music_brainz_id(toc);
+        let disc = calculate_id::calculate_music_brainz_disc(toc);
 
-        println!("MusicBrainzId: {id}");
+        println!("MusicBrainzId: {}", disc.id);
 
         let includes: Vec<&str> = vec!["recordings", "artist-credits", "genres"];
 
-        let result = self.lookup_by_disc_id(&id, &includes);
+        let result = self.lookup_by_disc_id(&disc.id, &disc.toc_query, &includes);
 
         match result {
             Ok(response) => self.parse_metadata(&response),
@@ -170,7 +183,7 @@ impl MusicBrainzClient {
         Some(album)
     }
 
-    /// for now, find the first CD media and return it
+    /// for now, find the first CD-like media and return it
     fn find_cd_media<'a>(&self, media: &'a Option<Vec<Medium>>) -> Option<&'a Medium> {
         let Some(mediums) = media else {
             return None;
@@ -178,7 +191,7 @@ impl MusicBrainzClient {
 
         for medium in mediums {
             if let Some(medium_format) = &medium.format
-                && medium_format == "CD"
+                && is_cd_media_format(medium_format)
             {
                 return Some(medium);
             }
@@ -246,6 +259,10 @@ impl MusicBrainzClient {
         genres.dedup();
         genres
     }
+}
+
+fn is_cd_media_format(format: &str) -> bool {
+    format.contains("CD")
 }
 
 #[derive(Debug)]

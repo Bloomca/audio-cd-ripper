@@ -93,7 +93,7 @@ pub fn write_album(
     let mut failed_tracks: Vec<(u8, String)> = Vec::new();
 
     for (track_num, track) in tracks_to_rip {
-        println!("\nWriting a track #{}: {}", track_num, &track.title);
+        println!("\nWriting track #{}: {}", track_num, &track.title);
 
         match write_track_as_flac_with_progress(
             new_dir.join(sanitize_title(&track.title)),

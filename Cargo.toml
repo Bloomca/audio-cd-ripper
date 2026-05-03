@@ -11,7 +11,7 @@ exclude = ["target", "Cargo.lock"]
 
 [dependencies]
 base64 = "0.22.1"
-cd-da-reader = "0.2.1"
+cd-da-reader = "0.3.1"
 flac-codec = "1.1.0"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.143"

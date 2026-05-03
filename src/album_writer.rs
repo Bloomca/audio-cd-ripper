@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::music_brainz::{Album, AlbumTrack};
-use cd_da_reader::{CdReader, Toc};
+use cd_da_reader::{CdReader, Toc, TrackStreamConfig};
 
 use flac_codec::{
     byteorder::LittleEndian,
@@ -93,17 +93,19 @@ pub fn write_album(
     let mut failed_tracks: Vec<(u8, String)> = Vec::new();
 
     for (track_num, track) in tracks_to_rip {
-        println!("Writing a track #{}: {}", track_num, &track.title);
+        println!("\nWriting a track #{}: {}", track_num, &track.title);
 
-        match reader.read_track(toc, track_num) {
-            Ok(track_data) => save_raw_data_as_flac(
-                new_dir.join(sanitize_title(&track.title)),
-                track_data,
-                track,
-                album,
-            ),
+        match write_track_as_flac_with_progress(
+            new_dir.join(sanitize_title(&track.title)),
+            reader,
+            toc,
+            track_num,
+            track,
+            album,
+        ) {
+            Ok(_) => {}
             Err(error) => {
-                println!("Could not read track #{}, {}", track_num, &track.title);
+                println!("Could not write track #{}, {}", track_num, &track.title);
                 println!("Error: {:#?}", error);
                 failed_tracks.push((track_num, track.title.clone()));
                 continue;
@@ -111,15 +113,15 @@ pub fn write_album(
         };
 
         println!(
-            "Successfully wrote the track #{}: {}",
+            "\r  Successfully wrote the track #{}: {}",
             track_num, &track.title
         );
     }
 
     if failed_tracks.is_empty() {
-        println!("All tracks were read successfully");
+        println!("All tracks were written successfully");
     } else {
-        println!("Failed to read {} track(s):", failed_tracks.len());
+        println!("Failed to write {} track(s):", failed_tracks.len());
         for (track_num, track_title) in &failed_tracks {
             println!("#{} {}", track_num, track_title);
         }
@@ -149,51 +151,132 @@ pub fn write_album(
     Ok(())
 }
 
-fn save_raw_data_as_flac(
+fn write_track_as_flac_with_progress(
     file_path: PathBuf,
-    data: Vec<u8>,
+    reader: &CdReader,
+    toc: &Toc,
+    track_num: u8,
     track: &AlbumTrack,
     album: &Album,
-) -> Option<()> {
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     let file = file_path.with_extension("flac");
 
     if file.exists() {
         println!("File {} already exists", file.display());
-        return None;
+        return Ok(());
     }
+
+    let temp_file = file.with_extension("flac.tmp");
+    if temp_file.exists() {
+        fs::remove_file(&temp_file)?;
+    }
+
+    let result = (|| -> std::result::Result<(), Box<dyn std::error::Error>> {
+        write_track_to_temp_flac(&temp_file, reader, toc, track_num)?;
+        update_track_metadata(&temp_file, track, album)?;
+        println!("\r  Successfully added metadata");
+        fs::rename(&temp_file, &file)?;
+        Ok(())
+    })();
+
+    if result.is_err() {
+        let _ = fs::remove_file(&temp_file);
+    }
+
+    result
+}
+
+fn write_track_to_temp_flac(
+    file: &Path,
+    reader: &CdReader,
+    toc: &Toc,
+    track_num: u8,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    const CDDA_SECTOR_BYTES: usize = 2352;
+
+    let mut stream = reader.open_track_stream(toc, track_num, TrackStreamConfig::default())?;
+    let total_sectors = stream.total_sectors();
+    let total_secs = stream.total_seconds();
+    let total_bytes = u64::from(total_sectors) * CDDA_SECTOR_BYTES as u64;
+    let mut printed_progress = false;
 
     // CD-DA: 44_100 Hz, 16-bit, 2 channels
     let sample_rate = 44_100u32;
     let bits_per_sample = 16u32;
     let channels = 2u8;
-
-    {
-        let mut flac_writer: FlacByteWriter<std::io::BufWriter<fs::File>, LittleEndian> =
-            FlacByteWriter::create(
-                &file,
-                Options::best(),
-                sample_rate,
-                bits_per_sample,
-                channels,
-                None,
-            )
-            .unwrap();
-
-        flac_writer.write_all(&data).ok()?;
-
-        flac_writer.finalize().ok()?;
-    }
-
-    match update_track_metadata(&file, track, album) {
-        Ok(_) => {
-            println!("Successfully added metadata");
-        }
-        Err(flac_error) => {
-            println!("{:#?}", flac_error);
-        }
+    let total_bytes = if total_bytes == 0 {
+        None
+    } else {
+        Some(total_bytes)
     };
 
-    Some(())
+    let mut flac_writer: FlacByteWriter<std::io::BufWriter<fs::File>, LittleEndian> =
+        FlacByteWriter::create(
+            file,
+            Options::best(),
+            sample_rate,
+            bits_per_sample,
+            channels,
+            total_bytes,
+        )?;
+
+    loop {
+        match stream.next_chunk() {
+            Ok(Some(chunk)) => {
+                if let Err(error) = flac_writer.write_all(&chunk) {
+                    if printed_progress {
+                        eprintln!();
+                    }
+
+                    return Err(error.into());
+                }
+
+                print_rip_progress(stream.current_seconds(), total_secs);
+                printed_progress = true;
+            }
+            Ok(None) => break,
+            Err(error) => {
+                if printed_progress {
+                    eprintln!();
+                }
+
+                return Err(error.into());
+            }
+        }
+    }
+
+    print_rip_progress(total_secs, total_secs);
+
+    if let Err(error) = flac_writer.finalize() {
+        eprintln!();
+        return Err(error.into());
+    }
+    eprintln!();
+
+    Ok(())
+}
+
+fn print_rip_progress(current_secs: f32, total_secs: f32) {
+    let percent = if total_secs > 0.0 {
+        current_secs / total_secs * 100.0
+    } else {
+        100.0
+    };
+
+    eprint!(
+        "\r  Reading and encoding: [{} / {}] {:5.1}%",
+        format_duration(current_secs),
+        format_duration(total_secs),
+        percent.min(100.0)
+    );
+}
+
+fn format_duration(seconds: f32) -> String {
+    let total_seconds = seconds.round() as u32;
+    let minutes = total_seconds / 60;
+    let seconds = total_seconds % 60;
+
+    format!("{minutes:02}:{seconds:02}")
 }
 
 fn update_track_metadata(
